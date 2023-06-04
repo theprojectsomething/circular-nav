@@ -7,12 +7,6 @@
 // === 0:0 => 1:0.115 => 1:0.886 => 0:1
 // compare current rotation against starting rotation and create determinstic alpha range
 
-@property --ceil {
-  syntax: '<integer>';
-  initial-value: 0;
-  inherits: false;
-}
-
 body {
   height: 100vh;
   display: flex;
@@ -36,8 +30,20 @@ nav {
     content: 'x: ' counter(scrollx) ' y: ' counter(scrolly) ' s: '
       counter(rotate);
     position: absolute;
-    z-index: 1;
+    z-index: 10;
+    background: #fffa;
+    pointer-events: none;
+    bottom: 0;
     // content: var(--scroll-x);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    top: 50%;
+    box-shadow: 1px -1px, 6em -6em 0 0 #0002;
   }
 
   .scroller {
@@ -86,16 +92,21 @@ nav {
     display: block;
     position: absolute;
     counter-increment: nav;
-    transform: rotate(var(--rotate)) translateX(5em) scale(var(--scale));
+    transform: rotate(var(--rotate)) translateX(5em) scale(var(--scale))
+      rotate(calc(var(--rotate) * -1 - var(--rotate-offset)));
 
     // &:nth-child(5) {
     // not 4 - x .. needs to be factor of rotation
     // index / 8
-    --scroll-i: calc(0.5 - var(--index) / 8 + var(--scroll, 0));
+    // items / 8 = 12 / 8
+    // --scroll-i: calc((8 * 0.5 / (var(--items) + 1)) - var(--index) / 8 + var(--scroll, 0));
+    // --scroll-i: calc(0.5 - var(--index) / 8 + var(--scroll, 0));
+
+    --scroll-p: calc(var(--scroll, 0) * (var(--items) - 1) / 8);
+    --scroll-i: calc(0.5 - var(--index) / 8 + var(--scroll-p));
     --ramp-c: calc(2 * var(--scroll-i) - 1);
     --ramp: calc(2.5 * (1 - var(--ramp-c) * var(--ramp-c)));
     --alpha: clamp(0, var(--ramp), 1);
-    --ceil: clamp(0, calc(var(--ramp) / 0), 1);
     --scale: clamp(0, calc(var(--ramp) / 0), 1);
     opacity: calc(var(--alpha) * var(--alpha));
 
@@ -126,23 +137,35 @@ nav {
       --index-mod: 7;
     }
 
-    &:empty::before,
     label {
       pointer-events: all;
 
       // --ceil: calc(var(--opacity) + 0.5);
       // --ceil: 2;
-      counter-reset: ceil var(--ceil);
+      counter-reset: ceil var(--scale);
       width: 3em;
       display: block;
-      content: counter(nav) ':' counter(ceil);
       line-height: 3em;
       text-align: center;
       position: absolute;
-      transform: translate(-50%, -50%)
-        rotate(calc(var(--rotate) * -1 - var(--rotate-offset)));
+      transform: translate(-50%, -50%);
+      // rotate(calc(var(--rotate) * -1 - var(--rotate-offset)));
       border-radius: 50%;
       background: #f0f;
+
+      &:has(input:checked) {
+        background: #faf;
+      }
+
+      &::before {
+        content: counter(nav);
+        position: absolute;
+        z-index: 1;
+        width: 100%;
+        left: 0;
+        top: -1.1em;
+        font-size: 0.8em;
+      }
     }
 
     &:hover {

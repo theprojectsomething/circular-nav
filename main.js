@@ -4,7 +4,8 @@ console.clear();
 const el = {
   scroller: document.querySelector('.scroller'),
   nav: document.querySelector('nav'),
-  navitems: document.querySelectorAll('nav li'),
+  navitems: Array.from(document.querySelectorAll('nav li')),
+  naviteminputs: Array.from(document.querySelectorAll('nav li input')),
 };
 
 let scrollXPrev = 0;
@@ -12,8 +13,7 @@ let scrollYPrev = 0;
 let scrollPrev = 0;
 
 const onScroll = () => {
-  console.log('no scroll', xxx);
-
+  fn.onScrollEnd();
   if (xxx) {
     xxx = false;
     return;
@@ -37,17 +37,14 @@ const onScroll = () => {
   scrollYPrev = scrollY;
 
   // let scroll;
-  console.log({ scrollXDelta, scrollYDelta });
+  // console.log({ scrollXDelta, scrollYDelta });
   if (Math.abs(scrollXDelta) > Math.abs(scrollYDelta)) {
-    console.log('Set Y');
     el.scroller.scrollTop = scrollLeft;
     scrollPrev = scrollX;
   } else if (scrollXDelta !== scrollYDelta) {
-    console.log('Set X');
     el.scroller.scrollLeft = scrollTop;
     scrollPrev = scrollY;
   } else {
-    console.log('Set None');
     scrollPrev = scrollX;
   }
   // const scroll = Math.min(1, (scrollX ** 2 + scrollY ** 2) ** 0.5);
@@ -62,17 +59,51 @@ const onScroll = () => {
 
 let xxx;
 const fn = {
+  indexFromScroll: (scroll) =>
+    Math.round((scroll * el.navitems.length) / el.scroller.scrollWidth),
+  scrollFromIndex: (index) =>
+    (el.scroller.scrollWidth * index) / el.navitems.length,
+  onScrollEnd: () => {
+    console.log('scroll timeout');
+    clearTimeout(fn.scrolltimeout);
+    fn.scrolltimeout = setTimeout(() => {
+      const visibleIndex = fn.indexFromScroll(el.scroller.scrollLeft);
+      console.log('scrollend', el.scroller.scrollLeft, visibleIndex);
+      if (visibleIndex !== fn.activeIndex) {
+        const item = el.naviteminputs.at(visibleIndex);
+        fn.activeIndex = visibleIndex;
+        item.checked = true;
+        item.focus();
+        console.log('scrollToIndex', item);
+        return;
+      }
+    }, 100);
+  },
   init() {
     el.nav.style.setProperty('--items', el.navitems.length);
     for (const [index, item] of el.navitems.entries()) {
       item.style.setProperty('--index', index);
     }
     el.scroller.addEventListener('scroll', onScroll);
-    el.nav.addEventListener('input', (e) => {
-      const index = e.target.closest('li').style.getPropertyValue('--index');
+    fn.activeIndex = 0;
+    fn.activeItem = el.naviteminputs.at(fn.activeIndex);
+    el.nav.addEventListener('focusin', (e) => {
+      // console.log(document.activeElement)
+      // e.preventDefault();
+      // return;
+      const index = el.naviteminputs.indexOf(e.target);
+      if (Math.abs(index - fn.activeIndex) > 4) {
+        fn.activeItem.checked = true;
+        fn.activeItem.focus();
+        console.log(fn.activeItem.checked);
+        return;
+      }
+      fn.activeItem = e.target;
+      fn.activeIndex = index;
+
+      // const index = e.target.closest('li').style.getPropertyValue('--index');
       console.log(index);
-      const scroll =
-        (el.scroller.scrollWidth * index) / (el.navitems.length - 1);
+      const scroll = fn.scrollFromIndex(index);
       // xxx = true;
       // el.scroller.scrollTop = el.scroller.scrollLeft = scroll;
       scrollPrev = scroll;
@@ -82,14 +113,14 @@ const fn = {
         left: scroll,
         // behavior: 'instant',
       });
-      console.log(
-        typeof scroll,
-        scroll,
-        el.scroller.scrollTop,
-        el.scroller.scrollLeft,
-        el.scroller.offsetWidth,
-        el.scroller.scrollWidth
-      );
+      // console.log(
+      //   typeof scroll,
+      //   scroll,
+      //   el.scroller.scrollTop,
+      //   el.scroller.scrollLeft,
+      //   el.scroller.offsetWidth,
+      //   el.scroller.scrollWidth
+      // );
     });
   },
 };
