@@ -1,0 +1,156 @@
+// https://css-tricks.com/using-absolute-value-sign-rounding-and-modulo-in-css-today/
+// --floor: calc(var(--a)/var(--b) - .5);
+// --mod: calc(var(--a) - var(--b)*var(--floor))
+
+// Use 2 * (1 - x^2) to plot curve that maxes alpha at 1 and mins at 0
+// 2.5 * (1 - (2 * x - 1)^2)
+// === 0:0 => 1:0.115 => 1:0.886 => 0:1
+// compare current rotation against starting rotation and create determinstic alpha range
+
+@property --ceil {
+  syntax: '<integer>';
+  initial-value: 0;
+  inherits: false;
+}
+
+body {
+  height: 100vh;
+  display: flex;
+}
+
+nav {
+  margin: auto;
+  width: 12em;
+  height: 12em;
+  display: block;
+  position: relative;
+
+  --rotate-offset: calc(var(--scroll, 0) * (var(--items) - 1) * 45deg);
+
+  // rotations = total / (total in circle + 1)
+  // val = 4 - index
+
+  &::before {
+    counter-reset: scrollx calc(var(--scroll-x, 0) * 100) scrolly
+      calc(var(--scroll-y, 0) * 100) rotate calc(var(--alpha-test, 0) * 100);
+    content: 'x: ' counter(scrollx) ' y: ' counter(scrolly) ' s: '
+      counter(rotate);
+    position: absolute;
+    z-index: 1;
+    // content: var(--scroll-x);
+  }
+
+  .scroller {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: orange;
+    overflow: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+
+    &::-webkit-scrollbar {
+      background: transparent; /* Chrome/Safari/Webkit */
+      width: 0px;
+    }
+
+    span {
+      --dim: calc(var(--items) * 100%);
+      display: block;
+      width: var(--dim);
+      aspect-ratio: 1;
+      background: linear-gradient(-45deg, #0f0a, #f00a),
+        linear-gradient(to bottom left, #333 50%, #eee 50%);
+    }
+  }
+
+  ol {
+    padding: 0;
+    margin: 0;
+    list-style-position: inside;
+    display: flex;
+    counter-reset: nav;
+    position: absolute;
+    left: 6em;
+    top: 6em;
+    background: blue;
+    z-index: 1;
+    pointer-events: none;
+    transform: rotate(var(--rotate-offset));
+  }
+
+  li {
+    --rotate: calc(var(--index-mod) * -45deg - 90deg);
+    display: block;
+    position: absolute;
+    counter-increment: nav;
+    transform: rotate(var(--rotate)) translateX(5em) scale(var(--scale));
+
+    // &:nth-child(5) {
+    // not 4 - x .. needs to be factor of rotation
+    // index / 8
+    --scroll-i: calc(0.5 - var(--index) / 8 + var(--scroll, 0));
+    --ramp-c: calc(2 * var(--scroll-i) - 1);
+    --ramp: calc(2.5 * (1 - var(--ramp-c) * var(--ramp-c)));
+    --alpha: clamp(0, var(--ramp), 1);
+    --ceil: clamp(0, calc(var(--ramp) / 0), 1);
+    --scale: clamp(0, calc(var(--ramp) / 0), 1);
+    opacity: calc(var(--alpha) * var(--alpha));
+
+    // }
+
+    &:nth-child(8n + 1) {
+      --index-mod: 0;
+    }
+    &:nth-child(8n + 2) {
+      --index-mod: 1;
+    }
+    &:nth-child(8n + 3) {
+      --index-mod: 2;
+    }
+    &:nth-child(8n + 4) {
+      --index-mod: 3;
+    }
+    &:nth-child(8n + 5) {
+      --index-mod: 4;
+    }
+    &:nth-child(8n + 6) {
+      --index-mod: 5;
+    }
+    &:nth-child(8n + 7) {
+      --index-mod: 6;
+    }
+    &:nth-child(8n + 8) {
+      --index-mod: 7;
+    }
+
+    &:empty::before,
+    label {
+      pointer-events: all;
+
+      // --ceil: calc(var(--opacity) + 0.5);
+      // --ceil: 2;
+      counter-reset: ceil var(--ceil);
+      width: 3em;
+      display: block;
+      content: counter(nav) ':' counter(ceil);
+      line-height: 3em;
+      text-align: center;
+      position: absolute;
+      transform: translate(-50%, -50%)
+        rotate(calc(var(--rotate) * -1 - var(--rotate-offset)));
+      border-radius: 50%;
+      background: #f0f;
+    }
+
+    &:hover {
+      &:empty::before,
+      label {
+        background: #ff0;
+        opacity: 1;
+      }
+    }
+  }
+}
