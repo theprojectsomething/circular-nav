@@ -2,14 +2,11 @@
 // --floor: calc(var(--a)/var(--b) - .5);
 // --mod: calc(var(--a) - var(--b)*var(--floor))
 
-// Use 2 * (1 - x^2) to plot curve that maxes alpha at 1 and mins at 0
-// 2.5 * (1 - (2 * x - 1)^2)
-// === 0:0 => 1:0.115 => 1:0.886 => 0:1
-// compare current rotation against starting rotation and create determinstic alpha range
-
 body {
-  height: 100vh;
+  height: 90vh;
   display: flex;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 nav {
@@ -18,23 +15,23 @@ nav {
   height: 12em;
   display: block;
   position: relative;
-
-  --rotate-offset: calc(var(--scroll, 0) * (var(--items) - 1) * 45deg);
-
-  // rotations = total / (total in circle + 1)
-  // val = 4 - index
+  --items-circle: 10;
+  --rotate-offset: 360deg / var(--items-circle);
+  --rotate: calc(var(--scroll, 0) * (var(--items) - 1) * var(--rotate-offset));
+  --scroll-rotations: calc(
+    var(--scroll, 0) * (var(--items) - 1) / var(--items-circle)
+  );
 
   &::before {
-    counter-reset: scrollx calc(var(--scroll-x, 0) * 100) scrolly
-      calc(var(--scroll-y, 0) * 100) rotate calc(var(--alpha-test, 0) * 100);
-    content: 'x: ' counter(scrollx) ' y: ' counter(scrolly) ' s: '
-      counter(rotate);
+    counter-reset: scroll calc(var(--scroll, 0) * 100) rotations
+      calc(var(--scroll-rotations, 0) * 100);
+    content: 'P: ' counter(scroll) '% R: ' counter(rotations) '%';
     position: absolute;
     z-index: 10;
     background: #fffa;
     pointer-events: none;
     bottom: 0;
-    // content: var(--scroll-x);
+    font-size: 0.6em;
   }
 
   &::after {
@@ -44,6 +41,7 @@ nav {
     height: 50%;
     top: 50%;
     box-shadow: 1px -1px, 6em -6em 0 0 #0002;
+    pointer-events: none;
   }
 
   .scroller {
@@ -56,6 +54,7 @@ nav {
     overflow: auto;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE 10+ */
+    overscroll-behavior: none;
 
     &::-webkit-scrollbar {
       background: transparent; /* Chrome/Safari/Webkit */
@@ -84,87 +83,95 @@ nav {
     background: blue;
     z-index: 1;
     pointer-events: none;
-    transform: rotate(var(--rotate-offset));
+    transform: rotate(var(--rotate));
   }
 
   li {
-    --rotate: calc(var(--index-mod) * -45deg - 90deg);
+    --rotate-item: calc(var(--index) * -1 * var(--rotate-offset) - 90deg);
     display: block;
     position: absolute;
     counter-increment: nav;
-    transform: rotate(var(--rotate)) translateX(5em) scale(var(--scale))
-      rotate(calc(var(--rotate) * -1 - var(--rotate-offset)));
+    opacity: var(--alpha);
+    transform: rotate(var(--rotate-item)) translateX(5em) scale(var(--scale))
+      rotate(calc(var(--rotate-item) * -1 - var(--rotate)));
 
-    // &:nth-child(5) {
-    // not 4 - x .. needs to be factor of rotation
-    // index / 8
-    // items / 8 = 12 / 8
-    // --scroll-i: calc((8 * 0.5 / (var(--items) + 1)) - var(--index) / 8 + var(--scroll, 0));
-    // --scroll-i: calc(0.5 - var(--index) / 8 + var(--scroll, 0));
-
-    --scroll-p: calc(var(--scroll, 0) * (var(--items) - 1) / 8);
-    --scroll-i: calc(0.5 - var(--index) / 8 + var(--scroll-p));
-    --ramp-c: calc(2 * var(--scroll-i) - 1);
-    --ramp: calc(2.5 * (1 - var(--ramp-c) * var(--ramp-c)));
-    --alpha: clamp(0, var(--ramp), 1);
-    --scale: clamp(0, calc(var(--ramp) / 0), 1);
-    opacity: calc(var(--alpha) * var(--alpha));
-
-    // }
-
-    &:nth-child(8n + 1) {
-      --index-mod: 0;
-    }
-    &:nth-child(8n + 2) {
-      --index-mod: 1;
-    }
-    &:nth-child(8n + 3) {
-      --index-mod: 2;
-    }
-    &:nth-child(8n + 4) {
-      --index-mod: 3;
-    }
-    &:nth-child(8n + 5) {
-      --index-mod: 4;
-    }
-    &:nth-child(8n + 6) {
-      --index-mod: 5;
-    }
-    &:nth-child(8n + 7) {
-      --index-mod: 6;
-    }
-    &:nth-child(8n + 8) {
-      --index-mod: 7;
-    }
+    /**
+    *  Compares current rotation against starting rotation to create a
+    *  determinstic alpha / opacity range, based on a 1 - f(x)^2 curve,
+    *  where x = rotation and y = range, specifically:
+    *  A * (1 - (2 * x - 1)^2) to plot a curve that zeros y at x=0|1
+    *  and provides an faster ascent/descent to/from y=1 as A increases
+    *  e.g. 2.5 * (1 - (2 * x - 1)^2)
+    *  === 0:0 => 1:0.115 => 1:0.886 => 0:1
+    */
+    // 1. x: current rotation of the item
+    --x-item-scroll-rotations: calc(
+      0.5 - var(--index) / var(--items-circle) + var(--scroll-rotations)
+    );
+    // 2. f(x): shifts and squashes the curve so y(0)=x(0|1)
+    --fx-curve-shift: calc(2 * var(--x-item-scroll-rotations) - 1);
+    // 3. the range curve
+    --curve: calc(2.5 * (1 - var(--fx-curve-shift) * var(--fx-curve-shift)));
+    // 4. curve clamp, maintains 0>=y<=1
+    --curve-clamp: clamp(0, var(--curve), 1);
+    // 5. snaps the curve from y>0 === 1 to y<=0 === 0
+    --curve-snap: clamp(0, calc(var(--curve) / 0), 1);
+    --alpha: var(--curve-snap);
+    --scale: calc(var(--curve-clamp) * var(--curve-clamp));
 
     label {
       pointer-events: all;
-
-      // --ceil: calc(var(--opacity) + 0.5);
-      // --ceil: 2;
       counter-reset: ceil var(--scale);
       width: 3em;
-      display: block;
+      aspect-ratio: 1;
+      align-items: center;
+      justify-content: center;
+      display: flex;
       line-height: 3em;
       text-align: center;
       position: absolute;
       transform: translate(-50%, -50%);
-      // rotate(calc(var(--rotate) * -1 - var(--rotate-offset)));
       border-radius: 50%;
       background: #f0f;
 
-      &:has(input:checked) {
+      input {
+        direction: rtl;
+        padding: 0;
+        margin: 0;
+      }
+
+      &:focus-within {
         background: #faf;
       }
 
       &::before {
         content: counter(nav);
+        display: block;
         position: absolute;
         z-index: 1;
+        top: 0;
         width: 100%;
         left: 0;
-        top: -1.1em;
         font-size: 0.8em;
+        line-height: 1.4;
+        pointer-events: none;
+      }
+
+      &:focus-within::after {
+        content: 'Selected';
+        display: block;
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        left: 50%;
+        transform: translate(-50%, -2.4em);
+        font-size: 0.8em;
+        line-height: 1.4;
+        pointer-events: none;
+        background: #ff0;
+        color: #f0f;
+        padding: 0.2em 0.4em;
+        border: 1px solid #f0f;
       }
     }
 
@@ -172,8 +179,17 @@ nav {
       &:empty::before,
       label {
         background: #ff0;
+        border: 1px solid #f0f;
         opacity: 1;
       }
     }
   }
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+  font-size: 0.8;
+  padding: 1em;
+  text-align: center;
 }
