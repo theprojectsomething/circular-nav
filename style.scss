@@ -1,6 +1,6 @@
+// Helpful links:
 // https://css-tricks.com/using-absolute-value-sign-rounding-and-modulo-in-css-today/
-// --floor: calc(var(--a)/var(--b) - .5);
-// --mod: calc(var(--a) - var(--b)*var(--floor))
+// https://www.desmos.com/calculator/82pcwe8lps
 
 body {
   height: 90vh;
@@ -103,6 +103,7 @@ nav {
     *  and provides an faster ascent/descent to/from y=1 as A increases
     *  e.g. 2.5 * (1 - (2 * x - 1)^2)
     *  === 0:0 => 1:0.115 => 1:0.886 => 0:1
+    *  See: https://www.desmos.com/calculator/82pcwe8lps
     */
     // 1. x: current rotation of the item
     --x-item-scroll-rotations: calc(
