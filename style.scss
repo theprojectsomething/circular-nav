@@ -15,7 +15,7 @@ nav {
   height: 12em;
   display: block;
   position: relative;
-  --items-circle: 10;
+  --items-circle: 9;
   --rotate-offset: 360deg / var(--items-circle);
   --rotate: calc(var(--scroll, 0) * (var(--items) - 1) * var(--rotate-offset));
   --scroll-rotations: calc(
@@ -42,6 +42,26 @@ nav {
     top: 50%;
     box-shadow: 1px -1px, 6em -6em 0 0 #0002;
     pointer-events: none;
+  }
+
+  .button {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 1;
+
+    label[for='option0'] {
+      position: absolute;
+      left: 6em;
+      top: 6em;
+      width: 5em;
+      height: 5em;
+      display: block;
+      z-index: 10;
+      background: pink;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+    }
   }
 
   .scroller {

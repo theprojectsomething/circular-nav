@@ -37,8 +37,15 @@ const onScroll = () => {
     scrollWidth,
   } = el.scroller;
 
-  const scrollX = scrollLeft / (scrollWidth - offsetWidth);
-  const scrollY = scrollTop / (scrollHeight - offsetHeight);
+  // X / Y scroll position without overflow
+  const scrollX = Math.max(
+    0,
+    Math.min(1, scrollLeft / (scrollWidth - offsetWidth))
+  );
+  const scrollY = Math.max(
+    0,
+    Math.min(1, scrollTop / (scrollHeight - offsetHeight))
+  );
   // ensure comparisons check equivalence up to 3 decimal places
   const scrollXDelta = Math.round((scrollX - scroll) * 1e3);
   const scrollYDelta = Math.round((scrollY - scroll) * 1e3);
@@ -64,6 +71,9 @@ const onScroll = () => {
 // and errant keyboard nav past the first / last item
 const onScrollEnd = () => {
   clearTimeout(scrolltimeout);
+  if (dragging) {
+    return;
+  }
   scrolltimeout = setTimeout(() => {
     const visibleIndex = getIndexFromScroll(el.scroller.scrollLeft);
     const item = el.naviteminputs.at(visibleIndex);
@@ -116,6 +126,81 @@ const init = () => {
   // set up mouse and keyboard navigation listeners
   el.nav.addEventListener('focusin', onFocusIn);
   el.scroller.addEventListener('scroll', onScroll);
+  navDragInit();
+};
+
+let dragging;
+const navDragInit = () => {
+  const controller = new AbortController();
+  el.nav.addEventListener(
+    'mousedown',
+    (e) => {
+      e.preventDefault();
+      dragging = true;
+
+      const { left, right, top, bottom, width } =
+        e.currentTarget.getBoundingClientRect();
+      const cX = (left + right) / 2;
+      const cY = (top + bottom) / 2;
+      const itemsCircle = +getComputedStyle(el.nav).getPropertyValue(
+        '--items-circle'
+      );
+      const rotations = (el.navitems.length - 1) / itemsCircle;
+
+      console.log('dragstart', e.currentTarget, {
+        cX,
+        cY,
+        itemsCircle,
+      });
+
+      document.addEventListener(
+        'mouseup',
+        () => {
+          controller.abort();
+          dragging = false;
+          onScrollEnd();
+          navDragInit();
+        },
+        { once: true }
+      );
+
+      addEventListener(
+        'mousemove',
+        (e) => {
+          const mX = cX - e.clientX;
+          const mY = cY - e.clientY;
+          const hyp = Math.hypot(mX, mY);
+          if (hyp < 40) {
+            return;
+          }
+
+          const a0 = Math.atan2(mY, mX);
+          const a1 = Math.atan2(mY - e.movementY, mX - e.movementX);
+          console.log(hyp);
+          const aD = a1 - a0;
+          const angle =
+            Math.abs(aD) > Math.PI ? aD + (aD > 0 ? -1 : 1) * 2 * Math.PI : aD;
+          const ratio = angle / (2 * Math.PI);
+
+          el.scroller.scrollTop +=
+            (ratio * el.scroller.scrollHeight) / rotations;
+        },
+        {
+          signal: controller.signal,
+        }
+      );
+    },
+    {
+      once: true,
+    }
+  );
 };
 
 addEventListener('load', init);
+
+addEventListener('click', (e) => {
+  console.log(e.clientX, e.clientY);
+  const x = document.elementFromPoint(e.clientX, e.clientY);
+  const xx = document.elementsFromPoint(e.clientX, e.clientY);
+  console.log(x, xx);
+});
